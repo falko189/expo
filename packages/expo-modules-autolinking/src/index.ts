@@ -70,11 +70,11 @@ module.exports = async function(args: string[]) {
   registerResolveCommand('resolve', async (results, options) => {
     const modules = await resolveModulesAsync(results, options);
 
-    if (options.json) {
-      console.log(JSON.stringify({ modules }));
-    } else {
-      console.log({ modules });
-    }
+    // if (options.json) {
+    //   console.log(JSON.stringify({ modules }));
+    // } else {
+    //   console.log({ modules });
+    // }
   }).option<boolean>('-j, --json', 'Output results in the plain JSON format.', () => true, false);
 
   // Generates a source file listing all packages to link.

@@ -90,9 +90,33 @@ async function findModulesAsync(providedOptions) {
             }
         }
     }
-    return results;
+    // Get path to project's package.json
+    const packageJsonPath = await findPackageJsonPathAsync();
+    // It doesn't make much sense to strip modules if there is only one search path.
+    // Workspace root usually doesn't specify all its dependencies, so in this case we should link everything.
+    if (!packageJsonPath || options.searchPaths.length <= 1) {
+        return results;
+    }
+    return filterProjectIndependencies(packageJsonPath, results);
 }
 exports.findModulesAsync = findModulesAsync;
+function filterProjectIndependencies(packageJsonPath, results) {
+    const filteredResults = {};
+    function visitPackage(packageJsonPath) {
+        const packageJson = require(packageJsonPath);
+        for (const dependencyName in packageJson.dependencies) {
+            const dependencyResult = results[dependencyName];
+            if (dependencyResult && !filteredResults[dependencyName]) {
+                filteredResults[dependencyName] = dependencyResult;
+                visitPackage(path_1.default.join(dependencyResult.path, 'package.json'));
+            }
+        }
+    }
+    visitPackage(packageJsonPath);
+    console.log(filteredResults);
+    console.log(Object.keys(results).length, Object.keys(filteredResults).length);
+    return filteredResults;
+}
 /**
  * Merges autolinking options from different sources (the later the higher priority)
  * - options defined in package.json's `expoModules` field

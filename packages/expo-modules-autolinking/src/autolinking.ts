@@ -110,7 +110,40 @@ export async function findModulesAsync(providedOptions: SearchOptions): Promise<
       }
     }
   }
-  return results;
+
+  // Get path to project's package.json
+  const packageJsonPath = await findPackageJsonPathAsync();
+
+  // It doesn't make much sense to strip modules if there is only one search path.
+  // Workspace root usually doesn't specify all its dependencies, so in this case we should link everything.
+  if (!packageJsonPath || options.searchPaths.length <= 1) {
+    return results;
+  }
+  return filterProjectIndependencies(packageJsonPath, results);
+}
+
+function filterProjectIndependencies(packageJsonPath: string, results: SearchResults) {
+  const filteredResults: SearchResults = {};
+
+  function visitPackage(packageJsonPath: string) {
+    const packageJson = require(packageJsonPath);
+
+    for (const dependencyName in packageJson.dependencies) {
+      const dependencyResult = results[dependencyName];
+
+      if (dependencyResult && !filteredResults[dependencyName]) {
+        filteredResults[dependencyName] = dependencyResult;
+        visitPackage(path.join(dependencyResult.path, 'package.json'));
+      }
+    }
+  }
+
+  visitPackage(packageJsonPath);
+
+  console.log(filteredResults);
+  console.log(Object.keys(results).length, Object.keys(filteredResults).length);
+
+  return filteredResults;
 }
 
 /**
